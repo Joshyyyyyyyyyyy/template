@@ -1,37 +1,109 @@
-// ITO IF GUSTO NIYO LANG NAMAN MAY LIGHT AND DARK MODE HWAHHHAHAHAHHAHA
-let currentTheme = "dark";
+// YUNG THEME DARK AND LIGHT TRIP LANG NAMIN LAGYAN PERO IF AYAW PWEDE NAMAN TANGGALIN
+let currentTheme = "dark"
 
 function initializeTheme() {
-  const savedTheme = localStorage.getItem("theme") || "dark";
-  setTheme(savedTheme);
+  const savedTheme = localStorage.getItem("theme") || "dark"
+  setTheme(savedTheme)
 }
 
 function toggleTheme() {
-  const newTheme = currentTheme === "light" ? "dark" : "light";
-  setTheme(newTheme);
+  const newTheme = currentTheme === "light" ? "dark" : "light"
+  setTheme(newTheme)
 }
 
 function setTheme(theme) {
-  currentTheme = theme;
-  document.body.className = `theme-${theme}`;
-  localStorage.setItem("theme", theme);
+  currentTheme = theme
+  document.body.className = `theme-${theme}`
+  localStorage.setItem("theme", theme)
 
-  const themeBtn = document.querySelector(".theme-btn");
+  const themeBtn = document.querySelector(".theme-btn")
   if (themeBtn) {
-    const lightIcon = themeBtn.querySelector(".theme-icon-light");
-    const darkIcon = themeBtn.querySelector(".theme-icon-dark");
+    const lightIcon = themeBtn.querySelector(".theme-icon-light")
+    const darkIcon = themeBtn.querySelector(".theme-icon-dark")
     if (theme === "dark") {
-      if (lightIcon) lightIcon.style.display = "none";
-      if (darkIcon) darkIcon.style.display = "block";
+      if (lightIcon) lightIcon.style.display = "none"
+      if (darkIcon) darkIcon.style.display = "block"
     } else {
-      if (lightIcon) lightIcon.style.display = "block";
-      if (darkIcon) darkIcon.style.display = "none";
+      if (lightIcon) lightIcon.style.display = "block"
+      if (darkIcon) darkIcon.style.display = "none"
     }
   }
 }
 
-// IG GUSTO NIYO MALINIS KAHIT PAPANO PWEDE KAYO MAY FUNCTION AND CALL OUT NIYO NALANG PAG DIRECT KASI NAKAKAGULO KAYA BAHALA NA KAYO 
-// THEN HANAP NALANG LUCIDE MAGANDA PERO KAYO BAHALA
+let sidebarState = "open" 
+
+function initializeSidebar() {
+  const savedState = localStorage.getItem("sidebarState") || "open"
+  setSidebarState(savedState)
+
+  addTooltipsToNavLinks()
+}
+
+function setSidebarState(state) {
+  sidebarState = state
+  const sidebar = document.getElementById("sidebar")
+  const mainContent = document.querySelector(".main-content")
+  const overlay = document.getElementById("sidebarOverlay")
+  const toggleButton = document.querySelector(".universal-menu-toggle")
+  const menuIcon = toggleButton?.querySelector(".toggle-icon-menu")
+  const closeIcon = toggleButton?.querySelector(".toggle-icon-close")
+
+  if (!sidebar || !mainContent) return
+
+  sidebar.classList.remove("show", "closed")
+  mainContent.classList.remove("sidebar-closed")
+  if (overlay) overlay.classList.remove("show")
+
+  if (menuIcon) menuIcon.style.display = "block"
+  if (closeIcon) closeIcon.style.display = "none"
+
+  if (window.innerWidth > 768) {
+    if (state === "closed") {
+      sidebar.classList.add("closed")
+      mainContent.classList.add("sidebar-closed")
+      if (menuIcon) menuIcon.style.display = "block"
+      if (closeIcon) closeIcon.style.display = "none"
+    }
+  } else {
+    if (state === "open") {
+      sidebar.classList.add("show")
+      if (overlay) overlay.classList.add("show")
+      document.body.style.overflow = "hidden"
+      if (menuIcon) menuIcon.style.display = "none"
+      if (closeIcon) closeIcon.style.display = "block"
+    } else {
+      document.body.style.overflow = ""
+    }
+  }
+
+  localStorage.setItem("sidebarState", state)
+}
+
+function toggleSidebar() {
+  const newState = sidebarState === "open" ? "closed" : "open"
+  setSidebarState(newState)
+}
+
+function closeSidebar() {
+  const isMobile = window.innerWidth <= 768
+
+  if (isMobile && sidebarState === "open") {
+    setSidebarState("closed")
+    document.body.style.overflow = ""
+  }
+}
+
+function addTooltipsToNavLinks() {
+  const navLinks = document.querySelectorAll(".nav-link")
+  navLinks.forEach((link) => {
+    const textSpan = link.querySelector(".nav-text")
+    if (textSpan) {
+      link.setAttribute("title", textSpan.textContent)
+    }
+  })
+}
+
+
 function getSectionIcon(sectionId) {
   switch (sectionId) {
     case "tuition-balance":
@@ -42,7 +114,7 @@ function getSectionIcon(sectionId) {
             <line x1="12" y1="1" x2="12" y2="23"></line>
             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
           </svg>
-        </span>`;
+        </span>`
     case "scholarship-application":
       return `
         <span class="search-icon">
@@ -51,7 +123,7 @@ function getSectionIcon(sectionId) {
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
             <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
           </svg>
-        </span>`;
+        </span>`
     case "payment-portal":
       return `
         <span class="search-icon">
@@ -60,7 +132,7 @@ function getSectionIcon(sectionId) {
             <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
             <line x1="1" y1="10" x2="23" y2="10"></line>
           </svg>
-        </span>`;
+        </span>`
     case "history":
       return `
         <span class="search-icon">
@@ -69,7 +141,7 @@ function getSectionIcon(sectionId) {
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12,6 12,12 16,14"></polyline>
           </svg>
-        </span>`;
+        </span>`
     case "account-settings":
       return `
         <span class="search-icon">
@@ -80,10 +152,10 @@ function getSectionIcon(sectionId) {
                      2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33
                      1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2
                      2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4
-                     a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0
-                     2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82
+                     a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0
+                     2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82
                      1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2
-                     2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9
+                     2 2 0 0 1-2-2h.09A1.65 1.65 0 0 0 4.6 9
                      a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83
                      2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9
                      a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2
@@ -93,7 +165,7 @@ function getSectionIcon(sectionId) {
                      a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2
                      2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
-        </span>`;
+        </span>`
     default:
       return `
         <span class="search-icon">
@@ -102,56 +174,65 @@ function getSectionIcon(sectionId) {
             <circle cx="11" cy="11" r="8"></circle>
             <path d="M21 21l-4.35-4.35"></path>
           </svg>
-        </span>`;
+        </span>`
   }
 }
 
 function initializeSearch() {
-  const searchTrigger = document.querySelector(".search-trigger");
-  const searchOverlay = document.getElementById("searchOverlay");
-  const globalSearchInput = document.getElementById("globalSearch");
-  const searchClose = document.querySelector(".search-close");
-  const searchResults = document.getElementById("searchResults");
+  const searchTrigger = document.querySelector(".search-trigger")
+  const searchOverlay = document.getElementById("searchOverlay")
+  const globalSearchInput = document.getElementById("globalSearch")
+  const searchClose = document.querySelector(".search-close")
+  const searchResults = document.getElementById("searchResults")
 
-  if (searchTrigger) searchTrigger.addEventListener("click", openGlobalSearch);
-  if (searchClose) searchClose.addEventListener("click", closeGlobalSearch);
-  if (globalSearchInput) globalSearchInput.addEventListener("input", handleGlobalSearch);
+  if (searchTrigger) searchTrigger.addEventListener("click", openGlobalSearch)
+  if (searchClose) searchClose.addEventListener("click", closeGlobalSearch)
+  if (globalSearchInput) globalSearchInput.addEventListener("input", handleGlobalSearch)
 
   // Close on ESC and click outside
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && searchOverlay && searchOverlay.classList.contains("show")) {
-      closeGlobalSearch();
+    if (e.key === "Escape") {
+      if (searchOverlay && searchOverlay.classList.contains("show")) {
+        closeGlobalSearch()
+      }
+      const sidebar = document.getElementById("sidebar")
+      if (sidebar && sidebar.classList.contains("show") && window.innerWidth <= 768) {
+        closeSidebar()
+      }
     }
-  });
+  })
+
   if (searchOverlay) {
     searchOverlay.addEventListener("click", (e) => {
-      if (e.target === searchOverlay) closeGlobalSearch();
-    });
+      if (e.target === searchOverlay) closeGlobalSearch()
+    })
   }
 
-  
   if (searchResults) {
     searchResults.addEventListener("click", (e) => {
-      const item = e.target.closest(".search-suggestion");
-      if (!item) return;
-      const section = item.dataset.section;
-      if (section) showSection(section);
-    });
+      const item = e.target.closest(".search-suggestion")
+      if (!item) return
+      const section = item.dataset.section
+      if (section) showSection(section)
+    })
   }
 }
 
 function openGlobalSearch() {
-  const searchOverlay = document.getElementById("searchOverlay");
-  const globalSearchInput = document.getElementById("globalSearch");
-  const searchResults = document.getElementById("searchResults");
+  const searchOverlay = document.getElementById("searchOverlay")
+  const globalSearchInput = document.getElementById("globalSearch")
+  const searchResults = document.getElementById("searchResults")
 
-  if (searchOverlay) searchOverlay.classList.add("show");
+  if (searchOverlay) searchOverlay.classList.add("show")
   if (globalSearchInput) {
-    globalSearchInput.value = "";
-    globalSearchInput.focus();
+    globalSearchInput.value = ""
+    if (window.innerWidth > 768) {
+      globalSearchInput.focus()
+    } else {
+      setTimeout(() => globalSearchInput.focus(), 100)
+    }
   }
 
-  // pwede kayo mag direct nasa inyo na yan magulo kasi sa paningin ko
   if (searchResults) {
     searchResults.innerHTML = `
       <div class="search-suggestion" data-section="tuition-balance">
@@ -166,22 +247,25 @@ function openGlobalSearch() {
         ${getSectionIcon("payment-portal")}
         <span>Payment Portal</span>
       </div>
-    `;
+    `
   }
 }
 
 function closeGlobalSearch() {
-  const searchOverlay = document.getElementById("searchOverlay");
-  const globalSearchInput = document.getElementById("globalSearch");
-  if (searchOverlay) searchOverlay.classList.remove("show");
-  if (globalSearchInput) globalSearchInput.value = "";
+  const searchOverlay = document.getElementById("searchOverlay")
+  const globalSearchInput = document.getElementById("globalSearch")
+  if (searchOverlay) searchOverlay.classList.remove("show")
+  if (globalSearchInput) {
+    globalSearchInput.value = ""
+    globalSearchInput.blur()
+  }
 }
 
 function handleGlobalSearch(e) {
-  const query = e.target.value.toLowerCase();
-  const searchResults = document.getElementById("searchResults");
-  if (!searchResults) return;
-// pwede niyo gawin direct SVG NA REMOVE NIYO NALANG FUNCTION
+  const query = e.target.value.toLowerCase()
+  const searchResults = document.getElementById("searchResults")
+  if (!searchResults) return
+
   if (query.length === 0) {
     searchResults.innerHTML = `
       <div class="search-suggestion" data-section="tuition-balance">
@@ -196,14 +280,14 @@ function handleGlobalSearch(e) {
         ${getSectionIcon("payment-portal")}
         <span>Payment Portal</span>
       </div>
-    `;
-    return;
+    `
+    return
   }
 
-  const results = performSearch(query);
-  displaySearchResults(results);
+  const results = performSearch(query)
+  displaySearchResults(results)
 }
-// change niyo rin to
+
 function performSearch(query) {
   const pool = [
     { title: "Tuition Balance", section: "tuition-balance" },
@@ -211,17 +295,17 @@ function performSearch(query) {
     { title: "Scholarship Application", section: "scholarship-application" },
     { title: "Account Settings", section: "account-settings" },
     { title: "Payment History", section: "history" },
-  ];
-  return pool.filter((r) => r.title.toLowerCase().includes(query));
+  ]
+  return pool.filter((r) => r.title.toLowerCase().includes(query))
 }
 
 function displaySearchResults(results) {
-  const searchResults = document.getElementById("searchResults");
-  if (!searchResults) return;
+  const searchResults = document.getElementById("searchResults")
+  if (!searchResults) return
 
   if (results.length === 0) {
-    searchResults.innerHTML = '<div class="search-suggestion">No results found</div>';
-    return;
+    searchResults.innerHTML = '<div class="search-suggestion">No results found</div>'
+    return
   }
 
   searchResults.innerHTML = results
@@ -231,19 +315,19 @@ function displaySearchResults(results) {
           ${getSectionIcon(r.section)}
           <span>${r.title}</span>
         </div>
-      `
+      `,
     )
-    .join("");
+    .join("")
 }
 
 function showSection(sectionId) {
-  closeGlobalSearch();
-  const link = document.querySelector(`.sidebar-nav [data-section="${sectionId}"]`);
+  closeGlobalSearch()
+  const link = document.querySelector(`.sidebar-nav [data-section="${sectionId}"]`)
   if (link && link.getAttribute("href")) {
-    window.location.href = link.getAttribute("href");
-    return;
+    window.location.href = link.getAttribute("href")
+    return
   }
-  // change niyo nalang according to your modules
+
   const routes = {
     dashboard: "index.html",
     "tuition-balance": "tutionbalance.html",
@@ -251,18 +335,43 @@ function showSection(sectionId) {
     "payment-portal": "paymentportal.html",
     history: "history.html",
     "account-settings": "account.html",
-  };
-  window.location.href = routes[sectionId] || "index.html";
+  }
+  window.location.href = routes[sectionId] || "index.html"
 }
-
-/* IF MAY LOG OUT NA KAYO PWEDE NA */
+// IF MY LOGIN NA KAYO LINK NIYO NALANG
 function logout() {
-  alert("Logging out…");
-  // window.location.href = "login.html"; 
+  alert("Logging out…")
+  // window.location.href = "login.html";
 }
 
-/* Boot */
+function initializeMobile() {
+  const overlay = document.getElementById("sidebarOverlay")
+  const navLinks = document.querySelectorAll(".nav-link")
+
+  if (overlay) {
+    overlay.addEventListener("click", closeSidebar)
+  }
+
+  navLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 768 && sidebarState === "open") {
+        closeSidebar()
+      }
+    })
+  })
+
+  let resizeTimeout
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout)
+    resizeTimeout = setTimeout(() => {
+      setSidebarState(sidebarState) 
+    }, 250)
+  })
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  initializeTheme();
-  initializeSearch();
-});
+  initializeTheme()
+  initializeSidebar()
+  initializeSearch()
+  initializeMobile()
+})
