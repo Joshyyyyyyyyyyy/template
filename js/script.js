@@ -145,6 +145,25 @@ function getSectionIcon(sectionId) {
     case "account-settings":
       return `
         <span class="search-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-user-icon lucide-circle-user">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/>
+          <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
+        </span>`
+    case "Security":
+       return `
+        <span class="search-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fingerprint-icon lucide-fingerprint"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+          <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+        </span>`
+    case "Student Additional Information":
+      return `
+        <span class="search-icon">
+         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-user-icon lucide-file-user"><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M15 18a3 3 0 1 0-6 0"/>
+          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><circle cx="12" cy="13" r="2"/></svg>
+        </span>`
+    case "Account Settings":
+      return `
+        <span class="search-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
@@ -295,6 +314,8 @@ function performSearch(query) {
     { title: "Scholarship Application", section: "scholarship-application" },
     { title: "Account Settings", section: "account-settings" },
     { title: "Payment History", section: "history" },
+    { title: "Security", section: "Security" },
+    { title: "Student Information Addition", section: "Student Information Addition" },
   ]
   return pool.filter((r) => r.title.toLowerCase().includes(query))
 }
@@ -329,14 +350,16 @@ function showSection(sectionId) {
   }
 
   const routes = {
-    dashboard: "index.html",
-    "tuition-balance": "tutionbalance.html",
-    "scholarship-application": "scholarship.html",
-    "payment-portal": "paymentportal.html",
-    history: "history.html",
-    "account-settings": "account.html",
+    dashboard: "index.php",
+    "tuition-balance": "tutionbalance.php",
+    "scholarship-application": "scholarship.php",
+    "payment-portal": "paymentportal.php",
+    history: "history.php",
+    "account-settings": "account.php",
+    "Security": "security.php",
+    "Student Information Addition": "studentinfo.php",
   }
-  window.location.href = routes[sectionId] || "index.html"
+  window.location.href = routes[sectionId] || "index.php"
 }
 // IF MY LOGIN NA KAYO LINK NIYO NALANG
 function logout() {
@@ -375,3 +398,40 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeSearch()
   initializeMobile()
 })
+// SECURITY
+function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const wrapper = input.closest('.password-input-wrapper');
+            const eyeIcon = wrapper.querySelector('.eye-icon');
+            const eyeOffIcon = wrapper.querySelector('.eye-off-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                eyeIcon.style.display = 'none';
+                eyeOffIcon.style.display = 'block';
+            } else {
+                input.type = 'password';
+                eyeIcon.style.display = 'block';
+                eyeOffIcon.style.display = 'none';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('passwordChangeForm').reset();
+        }
+
+        document.getElementById('passwordChangeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('New password and confirm password do not match.');
+                return;
+            }
+            
+            // Add your password change logic here
+            console.log('Password change submitted');
+        });
