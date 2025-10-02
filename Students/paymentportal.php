@@ -1,11 +1,30 @@
+<?php
+session_start();
+require_once '../config/db_config.php';
+
+// Get student data (in production, use session-based authentication)
+$student_id = 1; // Hardcoded for demo
+$conn = getDBConnection();
+
+$stmt = $conn->prepare("SELECT s.*, t.fee_id, t.balance FROM students s LEFT JOIN tuition_fees t ON s.student_id = t.student_id WHERE s.student_id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
+$stmt->close();
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Payment Management System</title>
+    <title>Payment Management System</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+       
+    </style>
 </head>
 <body class="theme-dark">
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
@@ -56,7 +75,7 @@
                 <div class="user-profile">
                     <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
                     <div class="user-info">
-                        <span class="user-name">Joshua Garcia</span>
+                        <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
                         <span class="user-role">Student</span>
                     </div>
                 </div>
@@ -190,14 +209,236 @@
                 </div>
             </div>
 
+            <!-- Redesigned payment portal with two-column layout showing student info -->
             <section id="dashboard" class="content-section active">
                 <div class="section-header">
                     <h1>Payment Portal</h1>
+                </div>
+
+                <div class="payment-portal-grid">
+                    <!-- Student Information Card -->
+                    <div class="student-info-card">
+                        <h2>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            Student Information
+                        </h2>
+
+                        <div class="info-section">
+                            <div class="info-item">
+                                <div class="student-name-display"><?php echo htmlspecialchars($student['name']); ?></div>
+                                <div class="student-email-display"><?php echo htmlspecialchars($student['email']); ?></div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-section-title">Academic Details</div>
+                            <div class="info-item">
+                                <span class="info-label">Program</span>
+                                <span class="info-value"><?php echo htmlspecialchars($student['program']); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Year Level</span>
+                                <span class="info-value"><?php echo htmlspecialchars($student['year_level']); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">College</span>
+                                <span class="info-value"><?php echo htmlspecialchars($student['college']); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Campus</span>
+                                <span class="info-value"><?php echo htmlspecialchars($student['campus']); ?></span>
+                            </div>
+                        </div>
+
+                        <div class="balance-highlight">
+                            <div class="label">Outstanding Balance</div>
+                            <div class="amount">₱<?php echo number_format($student['balance'], 2); ?></div>
+                            <div class="status">Payment Required</div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Form -->
+                    <div class="payment-form-container">
+                        <h2>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                            </svg>
+                            Make a Payment
+                        </h2>
+
+                        <div id="alertContainer"></div>
+
+                        <form id="paymentForm">
+                            <input type="hidden" id="studentId" value="<?php echo $student['student_id']; ?>">
+                            <input type="hidden" id="feeId" value="<?php echo $student['fee_id']; ?>">
+                            
+                            <div class="form-group">
+                                <label for="amount">Payment Amount</label>
+                                <input 
+                                    type="number" 
+                                    id="amount" 
+                                    name="amount" 
+                                    placeholder="Enter amount to pay" 
+                                    min="1" 
+                                    max="<?php echo $student['balance']; ?>"
+                                    step="0.01"
+                                    required
+                                >
+                                <small>Maximum: ₱<?php echo number_format($student['balance'], 2); ?></small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Select Payment Method</label>
+                                <div class="payment-methods">
+                                    <div class="payment-method" data-method="gcash">
+                                        <svg width="60" height="40" viewBox="0 0 60 40" fill="none">
+                                            <rect width="60" height="40" rx="6" fill="#007DFF"/>
+                                            <text x="30" y="25" text-anchor="middle" fill="white" font-size="14" font-weight="bold">GCash</text>
+                                        </svg>
+                                        <div class="payment-method-name">GCash</div>
+                                    </div>
+                                    <div class="payment-method" data-method="maya">
+                                        <svg width="60" height="40" viewBox="0 0 60 40" fill="none">
+                                            <rect width="60" height="40" rx="6" fill="#00D632"/>
+                                            <text x="30" y="25" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Maya</text>
+                                        </svg>
+                                        <div class="payment-method-name">Maya</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="payment-summary">
+                                <div class="payment-summary-item">
+                                    <span class="payment-summary-label">Current Balance:</span>
+                                    <span class="payment-summary-value">₱<?php echo number_format($student['balance'], 2); ?></span>
+                                </div>
+                                <div class="payment-summary-item">
+                                    <span class="payment-summary-label">Payment Amount:</span>
+                                    <span class="payment-summary-value" id="paymentAmountDisplay">₱0.00</span>
+                                </div>
+                                <div class="payment-summary-item">
+                                    <span class="payment-summary-label">Remaining Balance:</span>
+                                    <span class="payment-summary-value" id="remainingBalanceDisplay">₱<?php echo number_format($student['balance'], 2); ?></span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-btn" id="submitBtn">
+                                Proceed to Payment
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
     <script src="../js/script.js"></script>
+    <script>
+        let selectedMethod = null;
+        const currentBalance = <?php echo $student['balance']; ?>;
+
+        const amountInput = document.getElementById('amount');
+        const paymentAmountDisplay = document.getElementById('paymentAmountDisplay');
+        const remainingBalanceDisplay = document.getElementById('remainingBalanceDisplay');
+
+        amountInput.addEventListener('input', function() {
+            const amount = parseFloat(this.value) || 0;
+            const remaining = Math.max(0, currentBalance - amount);
+            
+            paymentAmountDisplay.textContent = '₱' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            remainingBalanceDisplay.textContent = '₱' + remaining.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        });
+
+        // Payment method selection
+        document.querySelectorAll('.payment-method').forEach(method => {
+            method.addEventListener('click', function() {
+                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedMethod = this.dataset.method;
+            });
+        });
+
+        // Form submission
+        document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const amount = parseFloat(document.getElementById('amount').value);
+            const studentId = document.getElementById('studentId').value;
+            const feeId = document.getElementById('feeId').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validation
+            if (!selectedMethod) {
+                showAlert('Please select a payment method', 'error');
+                return;
+            }
+
+            if (amount <= 0) {
+                showAlert('Please enter a valid amount', 'error');
+                return;
+            }
+
+            if (amount > currentBalance) {
+                showAlert('Payment amount cannot exceed outstanding balance', 'error');
+                return;
+            }
+
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('../api/payment_process.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        fee_id: feeId,
+                        amount: amount,
+                        payment_method: selectedMethod
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Payment initiated successfully! Redirecting...', 'success');
+                    // Redirect to PayMongo checkout or success page
+                    setTimeout(() => {
+                        if (data.checkout_url) {
+                            window.location.href = data.checkout_url;
+                        } else {
+                            window.location.href = 'history.php';
+                        }
+                    }, 1500);
+                } else {
+                    showAlert(data.message || 'Payment failed. Please try again.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Proceed to Payment';
+                }
+            } catch (error) {
+                console.error('[v0] Payment error:', error);
+                showAlert('An error occurred. Please try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Proceed to Payment';
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+            alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+    </script>
 </body>
 </html>

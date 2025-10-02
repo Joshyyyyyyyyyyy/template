@@ -1,3 +1,30 @@
+<?php
+session_start();
+require_once '../config/db_config.php';
+
+$student_id = 1; // Hardcoded for demo
+$conn = getDBConnection();
+
+$stmt = $conn->prepare("SELECT s.*, t.fee_id, t.semester, t.academic_year, t.tuition_fee, t.misc_fees, t.enrollment_fees, t.balance, t.paid_amount FROM students s LEFT JOIN tuition_fees t ON s.student_id = t.student_id WHERE s.student_id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
+$stmt->close();
+
+$stmt = $conn->prepare("SELECT * FROM payments WHERE student_id = ? AND payment_status = 'completed' ORDER BY created_at DESC");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$payments = $result->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+$actual_balance = $student['balance'];
+$total_paid = $student['paid_amount'];
+$is_regular = ($student['student_status'] === 'regular');
+
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,7 +83,7 @@
                 <div class="user-profile">
                     <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
                     <div class="user-info">
-                        <span class="user-name">Joshua Garcia</span>
+                        <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
                         <span class="user-role">Student</span>
                     </div>
                 </div>
@@ -122,7 +149,7 @@
                             <span class="nav-text">Account</span>
                         </a></li>
                          <li><a href="security.php" class="nav-link" data-section="account-settings" title="Settings">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fingerprint-icon lucide-fingerprint"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fingerprint-icon lucide-fingerprint"><path d="M12 10a2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/>
                             <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
                             <span class="nav-text">Security</span>
                         </a></li>
@@ -190,7 +217,7 @@
                 </div>
             </div>
             
-            <section id="dashboard" class="content-section active">
+               <section id="dashboard" class="content-section active">
                 <div class="section-header">
                     <h1>Tuition Balance</h1>
                     <button class="download-btn">
@@ -205,49 +232,51 @@
 
                 <div class="tuition-content">
                     <div class="tuition-cards">
-                        <!-- Student Information Card -->
                         <div class="info-card">
                             <h3>Student Information</h3>
                             <div class="info-grid">
                                 <div class="info-row">
                                     <span class="info-label">Program/Stand</span>
-                                    <span class="info-value">BS Information Technology</span>
+                                    <span class="info-value"><?php echo htmlspecialchars($student['program']); ?></span>
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">Year Level</span>
-                                    <span class="info-value">3rd Year</span>
+                                    <span class="info-value"><?php echo htmlspecialchars($student['year_level']); ?></span>
+                                </div>
+         
+                                <div class="info-row">
+                                    <span class="info-label">Student Status</span>
+                                    <span class="info-value"><?php echo ucfirst(htmlspecialchars($student['student_status'])); ?></span>
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">College</span>
-                                    <span class="info-value">College of Information Technology</span>
+                                    <span class="info-value"><?php echo htmlspecialchars($student['college']); ?></span>
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">Campus</span>
-                                    <span class="info-value">Quezon City Campus</span>
+                                    <span class="info-value"><?php echo htmlspecialchars($student['campus']); ?></span>
                                 </div>
                             </div>
 
-                            <!-- Outstanding Balance Section -->
                             <div class="balance-section">
                                 <h4>Outstanding Balance</h4>
-                                <div class="balance-amount">₱4,825</div>
+                                <div class="balance-amount">₱<?php echo number_format($actual_balance, 2); ?></div>
                                 <div class="balance-status">Payment Required</div>
                             </div>
                         </div>
 
-                        <!-- Fee Breakdown Card -->
                         <div class="fee-card">
                             <div class="fee-header">
                                 <h3>Fee Breakdown</h3>
-                                <span class="semester-badge">1st Semester AY 2025-2026</span>
+                                <span class="semester-badge"><?php echo htmlspecialchars($student['semester'] . ' ' . $student['academic_year']); ?></span>
                             </div>
 
                             <div class="fee-section">
                                 <div class="fee-item main-fee">
                                     <span class="fee-name">Tuition Fee</span>
-                                    <span class="fee-units">PAID</span>
-                                    <span class="fee-calculation">18 Units x 500</span>
-                                    <span class="fee-amount">₱ 9,000</span>
+                                    <span class="fee-units"><?php echo $is_regular ? 'SPONSORED' : '6 Subjects x ₱1,500'; ?></span>
+                                    <span class="fee-calculation"><?php echo $is_regular ? 'Fully Covered' : '18 Units x 500'; ?></span>
+                                    <span class="fee-amount"><?php echo $is_regular ? 'PAID' : '₱ ' . number_format($student['tuition_fee'], 2); ?></span>
                                 </div>
 
                                 <div class="fee-category">
@@ -293,7 +322,7 @@
                                         <span class="fee-amount">₱ 25</span>
                                     </div>
                                     <div class="fee-total">
-                                        <span class="fee-amount">₱ 4,975</span>
+                                        <span class="fee-amount">₱ <?php echo number_format($student['misc_fees'], 2); ?></span>
                                     </div>
                                 </div>
 
@@ -316,29 +345,43 @@
                                     </div>
                                 </div>
 
-                                <!-- Added LESS PAYMENT section to match original design -->
                                 <div class="fee-category">
-                                    <h4>LESS PAYMENT:</h4>
-                                    <div class="fee-item">
-                                        <span class="fee-name">O.R #122334455</span>
-                                        <span class="fee-amount">₱1000</span>
-                                    </div>
+                                    <h4>Payments:</h4>
+                                    <?php if (!empty($payments)): ?>
+                                        <?php foreach ($payments as $payment): ?>
+                                            <div class="fee-item">
+                                                <span class="fee-name">
+                                                    <?php echo strtoupper(htmlspecialchars($payment['payment_method'])); ?> Payment
+                                                    <span class="fee-description" style="display: block; font-size: 0.85em; color: var(--text-secondary); margin-top: 4px;">
+                                                        <?php echo date('M d, Y g:i A', strtotime($payment['created_at'])); ?>
+                                                    </span>
+                                                </span>
+                                                <span class="fee-amount">₱<?php echo number_format($payment['amount'], 2); ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <div class="fee-total" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                                            <span class="fee-name" style="font-weight: 600;">Total Paid</span>
+                                            <span class="fee-amount" style="font-weight: 600;">₱<?php echo number_format($total_paid, 2); ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="fee-item">
+                                            <span class="fee-name">No payments yet</span>
+                                            <span class="fee-amount">₱0.00</span>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Moved Pay Now button outside cards to span full width -->
                     <div class="payment-section">
-                        <button class="pay-now-btn">Pay Now</button>
+                        <button class="pay-now-btn" onclick="window.location.href='paymentportal.php'">Pay Now</button>
                     </div>
                 </div>
             </section>
         </main>
     </div>
-<STYle>
 
-</STYle>
     <script src="../js/script.js"></script>
 </body>
 </html>
