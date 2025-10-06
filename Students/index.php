@@ -1,9 +1,45 @@
+<?php
+session_start();
+require_once '../config/db_config.php';
+
+// Check if user is logged in
+if (!isset($_SESSION['student_id'])) {
+    header("Location: ../login.php");
+    exit();
+}
+
+$student_id = $_SESSION['student_id'];
+
+// Connect to DB
+$conn = getDBConnection();
+
+// Fetch student + user info
+$stmt = $conn->prepare("
+    SELECT s.*, 
+           u.user_type, 
+           u.profile_picture, 
+           u.email
+    FROM students s
+    LEFT JOIN users u ON s.user_id = u.user_id
+    WHERE s.student_id = ?
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
+
+$stmt->close();
+$conn->close();
+
+// Now you can use $student['name'], $student['profile_picture'], $student['user_type'], etc.
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Management System</title>
+    <title>PMS</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -51,13 +87,22 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-text">Joshua University</span>
+                    <span class="logo-text">University</span>
                 </div>
-                <div class="user-profile">
-                    <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
+                 <div class="user-profile"> 
+                    <img class="user-avatar" 
+                    src="<?php 
+                        if (!empty($student['profile_picture'])) {
+                            echo '../' . htmlspecialchars($student['profile_picture']); 
+                        } else {
+                            echo '../img/default-avatar.png'; 
+                        }
+                    ?>" 
+                    alt="Avatar">
+
                     <div class="user-info">
-                        <span class="user-name">Joshua Garcia</span>
-                        <span class="user-role">Student</span>
+                        <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
+                        <span class="user-role"><?php echo ucfirst($student['user_type']); ?></span>
                     </div>
                 </div>
             </div>

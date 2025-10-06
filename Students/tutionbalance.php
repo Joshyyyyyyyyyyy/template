@@ -1,36 +1,66 @@
 <?php
-session_start();
+require_once '../config/session.php';
 require_once '../config/db_config.php';
 
-$student_id = 1; // Hardcoded for demo
+// ✅ Check if user is logged in and is a student
+if (!isLoggedIn() || $_SESSION['user_type'] !== 'student') {
+    header('Location: ../login.php');
+    exit();
+}
+
+$student_id = $_SESSION['student_id'];
+
+// ✅ Validate that student_id exists
+if (!$student_id) {
+    die('Error: Student ID not found in session. Please log in again.');
+}
+
 $conn = getDBConnection();
 
-$stmt = $conn->prepare("SELECT s.*, t.fee_id, t.semester, t.academic_year, t.tuition_fee, t.misc_fees, t.enrollment_fees, t.balance, t.paid_amount FROM students s LEFT JOIN tuition_fees t ON s.student_id = t.student_id WHERE s.student_id = ?");
+// ✅ Fetch student info + tuition fees + linked user info (profile + role)
+$stmt = $conn->prepare("
+    SELECT s.*, 
+           t.fee_id, t.semester, t.academic_year, t.tuition_fee, 
+           t.misc_fees, t.enrollment_fees, t.balance, t.paid_amount,
+           u.user_type, u.profile_picture, u.email
+    FROM students s
+    LEFT JOIN tuition_fees t ON s.student_id = t.student_id
+    LEFT JOIN users u ON s.user_id = u.user_id
+    WHERE s.student_id = ?
+");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $student = $result->fetch_assoc();
 $stmt->close();
 
-$stmt = $conn->prepare("SELECT * FROM payments WHERE student_id = ? AND payment_status = 'completed' ORDER BY created_at DESC");
+// ✅ Fetch completed payments
+$stmt = $conn->prepare("
+    SELECT * 
+    FROM payments 
+    WHERE student_id = ? AND payment_status = 'completed' 
+    ORDER BY created_at DESC
+");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $payments = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// ✅ Balance + Paid amount + Status
 $actual_balance = $student['balance'];
 $total_paid = $student['paid_amount'];
 $is_regular = ($student['student_status'] === 'regular');
 
 $conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Management System</title>
+    <title>PMS</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -78,13 +108,22 @@ $conn->close();
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-text">Joshua University</span>
+                    <span class="logo-text">University</span>
                 </div>
-                <div class="user-profile">
-                    <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
+                 <div class="user-profile"> 
+                    <img class="user-avatar" 
+                    src="<?php 
+                        if (!empty($student['profile_picture'])) {
+                            echo '../' . htmlspecialchars($student['profile_picture']); 
+                        } else {
+                            echo '../img/default-avatar.png'; 
+                        }
+                    ?>" 
+                    alt="Avatar">
+
                     <div class="user-info">
                         <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
-                        <span class="user-role">Student</span>
+                        <span class="user-role"><?php echo ucfirst($student['user_type']); ?></span>
                     </div>
                 </div>
             </div>
@@ -187,7 +226,7 @@ $conn->close();
                         <polyline points="16,17 21,12 16,7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
                     </svg>
-                    <span class="logout-text">Logout</span>
+                    <span class="logout-text" >Logout</span>
                 </button>
             </div>
         </aside>

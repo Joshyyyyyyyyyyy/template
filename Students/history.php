@@ -1,19 +1,41 @@
 <?php
-session_start();
+require_once '../config/session.php';
 require_once '../config/db_config.php';
 
-$student_id = 1; // Hardcoded for demo
+// ✅ Check if user is logged in and is a student
+if (!isLoggedIn() || $_SESSION['user_type'] !== 'student') {
+    header('Location: ../login.php');
+    exit();
+}
+
+// ✅ Get student_id from session
+$student_id = $_SESSION['student_id'];
+
+// ✅ Validate that student_id exists
+if (!$student_id) {
+    die('Error: Student ID not found in session. Please log in again.');
+}
+
 $conn = getDBConnection();
 
-// Fetch student information
-$stmt = $conn->prepare("SELECT * FROM students WHERE student_id = ?");
+// ✅ FETCH STUDENT + PROFILE INFO
+$stmt = $conn->prepare("
+    SELECT 
+        s.*, 
+        u.user_type, 
+        u.profile_picture, 
+        u.email
+    FROM students s
+    LEFT JOIN users u ON s.user_id = u.user_id
+    WHERE s.student_id = ?
+");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $student = $result->fetch_assoc();
 $stmt->close();
 
-// Fetch all payments with fee details
+// ✅ FETCH PAYMENT DETAILS
 $stmt = $conn->prepare("
     SELECT 
         p.payment_id,
@@ -35,28 +57,72 @@ $result = $stmt->get_result();
 $payments = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Calculate statistics
+// ✅ Calculate payment statistics
 $total_paid = 0;
 $completed_payments = 0;
 $pending_payments = 0;
 
 foreach ($payments as $payment) {
     if ($payment['payment_status'] === 'completed') {
-        $total_paid += $payment['amount'];
+        $total_paid += (float) $payment['amount'];
         $completed_payments++;
-    } else if ($payment['payment_status'] === 'pending') {
+    } elseif ($payment['payment_status'] === 'pending') {
         $pending_payments++;
+    }
+}
+
+// ✅ FETCH SCHOLARSHIP APPLICATION DETAILS
+$stmt = $conn->prepare("
+    SELECT 
+        sa.application_id,
+        sa.scholarship_amount,
+        sa.scholarship_percentage,
+        sa.application_status,
+        sa.application_date,
+        sa.review_date,
+        sa.reviewed_by,
+        sa.remarks,
+        sa.academic_year,
+        sa.semester,
+        s.scholarship_name,
+        s.scholarship_code
+    FROM scholarship_applications sa
+    LEFT JOIN scholarships s ON sa.scholarship_id = s.scholarship_id
+    WHERE sa.student_id = ?
+    ORDER BY sa.application_date DESC
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$scholarship_applications = $result->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// ✅ Calculate scholarship statistics
+$total_scholarship_amount = 0;
+$approved_scholarships = 0;
+$pending_scholarships = 0;
+$rejected_scholarships = 0;
+
+foreach ($scholarship_applications as $application) {
+    if ($application['application_status'] === 'approved') {
+        $total_scholarship_amount += (float) $application['scholarship_amount'];
+        $approved_scholarships++;
+    } elseif ($application['application_status'] === 'pending' || $application['application_status'] === 'under_review') {
+        $pending_scholarships++;
+    } elseif ($application['application_status'] === 'rejected') {
+        $rejected_scholarships++;
     }
 }
 
 $conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Management System</title>
+    <title>PMS</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -145,6 +211,12 @@ $conn->close();
         .stat-icon.orange {
             background: rgba(251, 146, 60, 0.1);
             color: #fb923c;
+        }
+
+        /* Added red stat icon for rejected scholarships */
+        .stat-icon.red {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
         }
 
         .stat-label {
@@ -249,9 +321,38 @@ $conn->close();
             color: #fb923c;
         }
 
+        /* Added status badge styles for scholarship statuses */
+        .status-badge.approved {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .status-badge.under_review {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .status-badge.rejected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
         .status-badge.failed {
             background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
+        }
+
+        /* Added scholarship badge styles */
+        .scholarship-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
         }
 
         .empty-state {
@@ -400,13 +501,22 @@ $conn->close();
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-text">Joshua University</span>
+                    <span class="logo-text">University</span>
                 </div>
-                <div class="user-profile">
-                    <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
+                <div class="user-profile"> 
+                    <img class="user-avatar" 
+                    src="<?php 
+                        if (!empty($student['profile_picture'])) {
+                            echo '../' . htmlspecialchars($student['profile_picture']); 
+                        } else {
+                            echo '../img/default-avatar.png'; 
+                        }
+                    ?>" 
+                    alt="Avatar">
+
                     <div class="user-info">
                         <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
-                        <span class="user-role">Student</span>
+                        <span class="user-role"><?php echo ucfirst($student['user_type']); ?></span>
                     </div>
                 </div>
             </div>
@@ -659,8 +769,116 @@ $conn->close();
                     </div>
                 </div>
 
+                <!-- Replaced empty scholarship tab with full scholarship history implementation -->
                 <div id="scholarship-tab" class="tab-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-icon blue">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
+                                </div>
+                                <span class="stat-label">Total Scholarship Amount</span>
+                            </div>
+                            <div class="stat-value">₱<?php echo number_format($total_scholarship_amount, 2); ?></div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-icon green">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20,6 9,17 4,12"></polyline>
+                                    </svg>
+                                </div>
+                                <span class="stat-label">Approved Applications</span>
+                            </div>
+                            <div class="stat-value"><?php echo $approved_scholarships; ?></div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-icon orange">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12,6 12,12 16,14"></polyline>
+                                    </svg>
+                                </div>
+                                <span class="stat-label">Pending Applications</span>
+                            </div>
+                            <div class="stat-value"><?php echo $pending_scholarships; ?></div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-icon red">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </div>
+                                <span class="stat-label">Rejected Applications</span>
+                            </div>
+                            <div class="stat-value"><?php echo $rejected_scholarships; ?></div>
+                        </div>
+                    </div>
+
                     <div class="transactions-table-container">
+                        <div class="table-header">
+                            <h3>All Scholarship Applications</h3>
+                        </div>
+                        
+                        <?php if (count($scholarship_applications) > 0): ?>
+                        <table class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Application ID</th>
+                                    <th>Application Date</th>
+                                    <th>Scholarship Type</th>
+                                    <th>Academic Period</th>
+                                    <th>Coverage</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Review Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($scholarship_applications as $application): ?>
+                                <tr>
+                                    <td>
+                                        <span class="transaction-id">
+                                            APP-<?php echo str_pad($application['application_id'], 6, '0', STR_PAD_LEFT); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo date('M d, Y g:i A', strtotime($application['application_date'])); ?></td>
+                                    <td>
+                                        <span class="scholarship-badge">
+                                            <?php echo htmlspecialchars($application['scholarship_name']); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($application['semester'] . ' ' . $application['academic_year']); ?></td>
+                                    <td><?php echo number_format($application['scholarship_percentage'], 0); ?>%</td>
+                                    <td class="amount-cell">₱<?php echo number_format($application['scholarship_amount'], 2); ?></td>
+                                    <td>
+                                        <span class="status-badge <?php echo strtolower($application['application_status']); ?>">
+                                            <?php echo ucfirst(str_replace('_', ' ', htmlspecialchars($application['application_status']))); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        if ($application['review_date']) {
+                                            echo date('M d, Y', strtotime($application['review_date']));
+                                        } else {
+                                            echo '<span style="color: var(--text-secondary, #6b7280);">Not reviewed</span>';
+                                        }
+                                        ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon">
                                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -671,6 +889,7 @@ $conn->close();
                             <h3>No Scholarship History</h3>
                             <p>Your scholarship applications and awards will appear here.</p>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </section>

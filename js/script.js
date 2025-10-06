@@ -364,7 +364,7 @@ function showSection(sectionId) {
 // IF MY LOGIN NA KAYO LINK NIYO NALANG
 function logout() {
   alert("Logging out…")
-  // window.location.href = "login.html";
+   window.location.href = "../auth/logout.php";
 }
 
 function initializeMobile() {

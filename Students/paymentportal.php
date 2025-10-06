@@ -1,12 +1,29 @@
 <?php
-session_start();
+require_once '../config/session.php';
 require_once '../config/db_config.php';
 
-// Get student data (in production, use session-based authentication)
-$student_id = 1; // Hardcoded for demo
+if (!isLoggedIn() || $_SESSION['user_type'] !== 'student') {
+    header('Location: ../login.php');
+    exit();
+}
+
+$student_id = $_SESSION['student_id'];
+
+if (!$student_id) {
+    die('Error: Student ID not found in session. Please log in again.');
+}
+
 $conn = getDBConnection();
 
-$stmt = $conn->prepare("SELECT s.*, t.fee_id, t.balance FROM students s LEFT JOIN tuition_fees t ON s.student_id = t.student_id WHERE s.student_id = ?");
+$stmt = $conn->prepare("
+    SELECT s.*, 
+           t.fee_id, t.balance,
+           u.user_type, u.profile_picture, u.email
+    FROM students s
+    LEFT JOIN tuition_fees t ON s.student_id = t.student_id
+    LEFT JOIN users u ON s.user_id = u.user_id
+    WHERE s.student_id = ?
+");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -14,12 +31,13 @@ $student = $result->fetch_assoc();
 $stmt->close();
 $conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Management System</title>
+    <title>PMS</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -70,15 +88,26 @@ $conn->close();
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-text">Joshua University</span>
+                    <span class="logo-text">University</span>
                 </div>
-                <div class="user-profile">
-                    <img class="user-avatar" src="../img/joshua.jpeg" alt="Avatar">
+              <div class="user-profile"> 
+                    <img class="user-avatar" 
+                    src="<?php 
+                        if (!empty($student['profile_picture'])) {
+                            echo '../' . htmlspecialchars($student['profile_picture']); 
+                        } else {
+                            echo '../img/default-avatar.png'; 
+                        }
+                    ?>" 
+                    alt="Avatar">
+
                     <div class="user-info">
                         <span class="user-name"><?php echo htmlspecialchars($student['name']); ?></span>
-                        <span class="user-role">Student</span>
+                        <span class="user-role"><?php echo ucfirst($student['user_type']); ?></span>
                     </div>
                 </div>
+
+
             </div>
 
             <nav class="sidebar-nav">
